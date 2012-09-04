@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from django.contrib.auth.models import User
 from subscription.models import Subscription
 

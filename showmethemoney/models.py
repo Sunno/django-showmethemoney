@@ -1,6 +1,6 @@
-from collections import namedtuple
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+from django.dispatch import receiver
 
 from subscription.models import Subscription, UserSubscription
 
@@ -18,6 +18,7 @@ class Transaction(models.Model):
     class Meta:
         ordering = ('-timestamp',)
 
+@receiver(models.signals.pre_delete, sender=UserSubscription)
 def _deactivate_usersubscription_transaction(sender, instance, using):
     Transaction(user=sender.user, subscription=sender.subscription,
                 event='subscription removed').save()
