@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% with current_us=user.get_active_subscription %}
+{% if current_us %}
+<p>Your current subscription is {{ current_us.subscription }}. 
+<p><strong>Expires on:</strong> {{ current_us.expires }}</p>
+{% if current_us.cancelled %}
+<p><strong>This subscription has been cancelled.</strong> As soon as
+  your time expires, you won't be able to use the academy premium
+  services anymore.</p>
+{% endif %}
+{% else %}
+<p>You don't have any active subscription.</p>
+{% endif %}
+{% endwith %}
+
+<ul class="subscription-actions">
+  <li class="subscription-change">
+    <a href="{% url subscription:change %}" title="Change your current subscription status on the site">
+      Change subscription status
+    </a>
+  </li>
+  {% if current_us and  not current_us.cancelled %}
+  <li class="subscription-cancel">
+    <a href="{% url subscription:cancel %}" title="Cancel your subscription">Cancel subscription</a>
+  </li>  
+  {% endif %}
+</ul>
+
+{% endblock %}
+
