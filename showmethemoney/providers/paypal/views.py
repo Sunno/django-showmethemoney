@@ -15,7 +15,7 @@ import subscription.utils as subscription_utils
 from models import PayPalUserSubscription
 #from paypal.pro.views import PayPalPro
 if settings.DEBUG:
-    DOMAIN = '192.168.0.154:8000'
+    DOMAIN = 'localhost:8000'
 else:
     DOMAIN = Site.objects.get_current().domain
 
