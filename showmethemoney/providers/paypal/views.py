@@ -14,10 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 import subscription.utils as subscription_utils
 from models import PayPalUserSubscription
 #from paypal.pro.views import PayPalPro
-if settings.DEBUG:
-    DOMAIN = 'localhost:8000'
-else:
-    DOMAIN = Site.objects.get_current().domain
+DOMAIN = Site.objects.get_current().domain
 
 #from forms import SelectSubscriptionForm
 def _get_express_checkout_dict(subscription, user):
