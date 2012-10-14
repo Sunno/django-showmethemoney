@@ -1,8 +1,6 @@
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.views.generic import FormView, TemplateView
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
 from django.forms.util import ErrorList
 from django.contrib import messages
 import paypal
@@ -12,9 +10,9 @@ from showmethemoney.providers.paypal.models import PayPalTransaction
 import showmethemoney.providers.paypal.views as paypal_views
 
 class CancellableMixin(object):
-    def cancel(self, interface, profileid):
-        interface.manage_recurring_payments_profile_status(profileid, 'Cancel')
-
+    def cancel(self, interface, current):
+        interface.manage_recurring_payments_profile_status(current.profileid, 'Cancel')
+        current.cancel()
 
 class CancelSubscriptionView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/cancel.html'
@@ -22,19 +20,15 @@ class CancelSubscriptionView(CancellableMixin, TemplateView):
         """This is method is triggered when the user accepts that he
         wants to cancel his current subscription"""
         current = self.request.user.get_active_paypal_subscription()
-        if current is not None:
+        if current is not None and not current.cancelled:
             self.cancel(paypal_views._get_paypal_interface(),
-                        current.profileid)
+                        current)
             messages.success(self.request, 'Your subscription has been successfully cancelled.')
         return HttpResponseRedirect(reverse('subscription:manage'))
 
-class ChangeSubscriptionView(CancellableMixin, FormView):
+class ChangeSubscriptionView(FormView):
     form_class = SelectSubscriptionForm
     template_name = 'showmethemoney/create.html'
-
-    @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super(ChangeSubscriptionView, self).dispatch(*args, **kwargs)
 
     def form_valid(self, form):
         """We will proceed with the express checkout here."""
@@ -49,11 +43,10 @@ class ChangeSubscriptionView(CancellableMixin, FormView):
                 form._errors.setdefault('subscription', ErrorList(errors))
                 return self.form_invalid(form)
             # If we get this far it means we are updating a
-            # subscription.  We will delete it first, and then proceed
-            # with the usual process.
-            if not us.cancelled:
-                self.cancel(self.interface, us.profileid)
-        return self.subscribe(form)
+            # subscription.  We will mark it for deletion, delete it
+            # after we come back from paypal, and then proceed with
+            # the usual process.
+        return self.subscribe(form, us)
 
     def subscribe(self, form, us=None):
         '''Create a brand new subscription for this user.'''
@@ -81,10 +74,10 @@ class ChangeSubscriptionView(CancellableMixin, FormView):
         )
 
 
-class PaymentAuthorizedView(TemplateView):
+class PaymentAuthorizedView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/authorized.html'
-    payment_successful_url = 'my_profile_view'
-    payment_invalid_url = 'home'
+    payment_successful_url = 'subscription:manage'
+    payment_invalid_url = 'subscription:change'
 
     def get_context_data(self, **kwargs):
         ctx = super(PaymentAuthorizedView, self).get_context_data(**kwargs)
@@ -107,12 +100,18 @@ class PaymentAuthorizedView(TemplateView):
         subscription = self.request.session['paypal_subscription']
         recurr_dict, us = paypal_views.create_recurring_profile_handler(self.request)
         try:
+            # Check whether or not we have to delete our current subscription.
+            if self.request.session['paypal_upgrading']:
+                self.cancel(
+                    interface, self.request.session['paypal_current']
+                )
             response = interface.create_recurring_payments_profile(
                 **recurr_dict
             )
         except paypal.exceptions.PayPalAPIResponseError:
             messages.error(self.request, 'There has been an error with your request, please try again.')
-            return HttpResponseRedirect(reverse('subscription:change'))
+            return HttpResponseRedirect(reverse(self.payment_invalid_url))
+
         if response.profilestatus == 'ActiveProfile' or \
            response.profilestatus == 'PendingProfile':
             # We got a valid response here. Let's subscribe our user.'

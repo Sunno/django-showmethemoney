@@ -21,7 +21,7 @@
       Change subscription status
     </a>
   </li>
-  {% if current_us and  not current_us.cancelled %}
+  {% if current_us and not current_us.cancelled %}
   <li class="subscription-cancel">
     <a href="{% url subscription:cancel %}" title="Cancel your subscription">Cancel subscription</a>
   </li>  
