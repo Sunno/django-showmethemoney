@@ -3,9 +3,9 @@ from django.http import HttpResponseRedirect
 from django.views.generic import FormView, TemplateView
 from django.forms.util import ErrorList
 from django.contrib import messages
+from django.conf import settings
 import paypal
 
-from subscription.decorators import subscription_required
 
 from showmethemoney.forms import SelectSubscriptionForm
 from showmethemoney.providers.paypal.models import PayPalTransaction
@@ -27,7 +27,7 @@ class CancelSubscriptionView(CancellableMixin, TemplateView):
             self.cancel(paypal_views._get_paypal_interface(),
                         current)
             messages.success(self.request, 'Your subscription has been successfully cancelled.')
-        return HttpResponseRedirect(reverse('subscription:manage'))
+        return HttpResponseRedirect(reverse('subscription:change'))
 
 class ChangeSubscriptionView(FormView):
     form_class = SelectSubscriptionForm
@@ -79,7 +79,7 @@ class ChangeSubscriptionView(FormView):
 
 class PaymentAuthorizedView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/authorized.html'
-    payment_successful_url = 'subscription:manage'
+    payment_successful_url = settings.LOGIN_REDIRECT_URL
     payment_invalid_url = 'subscription:change'
 
     def get_context_data(self, **kwargs):
