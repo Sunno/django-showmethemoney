@@ -5,6 +5,8 @@ from django.forms.util import ErrorList
 from django.contrib import messages
 import paypal
 
+from subscription.decorators import subscription_required
+
 from showmethemoney.forms import SelectSubscriptionForm
 from showmethemoney.providers.paypal.models import PayPalTransaction
 import showmethemoney.providers.paypal.views as paypal_views
@@ -16,6 +18,7 @@ class CancellableMixin(object):
 
 class CancelSubscriptionView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/cancel.html'
+
     def post(self, request, *args, **kwargs):
         """This is method is triggered when the user accepts that he
         wants to cancel his current subscription"""
@@ -37,7 +40,7 @@ class ChangeSubscriptionView(FormView):
         self.user = self.request.user
         self.interface = paypal_views._get_paypal_interface()
         us = self.user.get_active_paypal_subscription()
-        if us is not None:
+        if us is not None and not us.expired and not us.cancelled and us.valid:
             errors = us.try_change(form.cleaned_data['subscription'])
             if errors:
                 form._errors.setdefault('subscription', ErrorList(errors))
