@@ -79,7 +79,7 @@ class ChangeSubscriptionView(FormView):
 
 class PaymentAuthorizedView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/authorized.html'
-    payment_successful_url = settings.LOGIN_REDIRECT_URL
+    payment_successful_url = 'class_list'
     payment_invalid_url = 'subscription:change'
 
     def get_context_data(self, **kwargs):
