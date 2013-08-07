@@ -116,6 +116,7 @@ def _get_paypal_interface():
         API_USERNAME=settings.PAYPAL_API_USERNAME,
         API_PASSWORD=settings.PAYPAL_API_PASSWORD,
         API_SIGNATURE=settings.PAYPAL_API_SIGNATURE,
+        API_ENVIRONMENT=settings.PAYPAL_API_ENVIRONMENT,
     )
 
 
