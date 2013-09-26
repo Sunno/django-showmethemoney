@@ -103,7 +103,7 @@ class PayPalIPN(models.Model):
     # Recurring Payments Variables
 
     # Non-PayPal Variables - full IPN/PDT query and time fields.
-    ipaddress = models.IPAddressField(blank=True)
+    ipaddress = models.IPAddressField(blank=True, null=True) # null=True because https://code.djangoproject.com/ticket/5622
     flag = models.BooleanField(default=False, blank=True)
     flag_code = models.CharField(max_length=16, blank=True)
     flag_info = models.TextField(blank=True)
