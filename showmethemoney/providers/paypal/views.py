@@ -133,13 +133,13 @@ def ipn(request):
 
     form = PayPalIPNForm(data)
     if form.is_valid():
-        # make ipaddress None because https://code.djangoproject.com/ticket/5622
         form.initialize(request)
-        if form.cleaned_data['ipaddress'] == '':
-            form.cleaned_data['ipaddress'] = None
         # TODO: SSL secrets.
         ipn_obj = form.save(commit=False)
         ipn_obj.from_view = 'notify'
+        # make ipaddress None because https://code.djangoproject.com/ticket/5622
+        if ipn_obj.ipaddress == '':
+            ipn_obj = None
         ipn_obj.save()
         ipn_obj.send_signals()
         print 'IPN request saved'
