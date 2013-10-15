@@ -139,7 +139,7 @@ def ipn(request):
         ipn_obj.from_view = 'notify'
         # make ipaddress None because https://code.djangoproject.com/ticket/5622
         if ipn_obj.ipaddress == '':
-            ipn_obj = None
+            ipn_obj.ipaddress = None
         ipn_obj.save()
         ipn_obj.send_signals()
         print 'IPN request saved'

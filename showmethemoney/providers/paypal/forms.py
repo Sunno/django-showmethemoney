@@ -2,7 +2,7 @@ import urllib2
 from django import forms
 from django.conf import settings
 from models import PayPalIPN, PayPalUserSubscription
-PAYPAL_DATE_FORMAT = ("%H:%M:%S %b. %d, %Y PST",
+PAYPAL_DATEFORMAT = ("%H:%M:%S %b. %d, %Y PST",
                       "%H:%M:%S %b. %d, %Y PDT",
                       "%H:%M:%S %d %b %Y PST",
                       "%H:%M:%S %d %b %Y PDT",
