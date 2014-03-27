@@ -133,7 +133,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
             else:
                 # This is the first time the user registers with us. We will
                 # award our trial period.
-                success_msg = 'Welcome! Get started by selecting below the type of golfer you want to be. After that what the "Welcome to the JVGA" video to begin your journey!'
+                success_msg = 'Welcome! Get started by selecting below the type of golfer you want to be. After that watch the "Welcome to the JVGA" video to begin your journey!'
                 PayPalTransaction(user=self.request.user, subscription=subscription,
                                   event='subscription create/modify (with trial)',
                                   amount=0).save()
