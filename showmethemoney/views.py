@@ -102,6 +102,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         interface = paypal_views._get_paypal_interface()
         subscription = self.request.session['paypal_subscription']
         recurr_dict, us = paypal_views.create_recurring_profile_handler(self.request)
+        success_msg = 'We have successfully updated your subscription status. Welcome to Jim Venetos Golf Academy!'
         try:
             # Check whether or not we have to delete our current subscription.
             if self.request.session['paypal_upgrading']:
@@ -132,6 +133,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
             else:
                 # This is the first time the user registers with us. We will
                 # award our trial period.
+                success_msg = 'Welcome! Get started by selecting below the type of golfer you want to be. After that what the "Welcome to the JVGA" video to begin your journey!'
                 PayPalTransaction(user=self.request.user, subscription=subscription,
                                   event='subscription create/modify (with trial)',
                                   amount=0).save()
@@ -139,8 +141,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
                 profile.save()
 
             url = self.payment_successful_url
-            messages.success(self.request,
-                             'We have successfully updated your subscription status. Welcome to Jim Venetos Golf Academy!')
+            messages.success(self.request, success_msg)
         else:
             # error, get out of here and restart.
             url = self.payment_invalid_url
