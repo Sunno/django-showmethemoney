@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.conf import settings
 import paypal
 
+from django.core.mail import EmailMessage
 
 from showmethemoney.forms import SelectSubscriptionForm
 from showmethemoney.providers.paypal.models import PayPalTransaction
@@ -61,7 +62,9 @@ class ChangeSubscriptionView(FormView):
                     user=self.user
                 )
             )
-        except paypal.exceptions.PayPalAPIResponseError:
+        except paypal.exceptions.PayPalAPIResponseError as e:
+            email = EmailMessage('PayPalError', e, 'contact@jimvenetosgolfacademy.com', ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
+            email.send()
             messages.error(self.request, 'There has been an error with your request, please try again.')
             return HttpResponseRedirect(reverse('subscription:change'))
 
@@ -112,7 +115,9 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
             response = interface.create_recurring_payments_profile(
                 **recurr_dict
             )
-        except paypal.exceptions.PayPalAPIResponseError:
+        except paypal.exceptions.PayPalAPIResponseError as e:
+            email = EmailMessage('PayPalError', e, 'contact@jimvenetosgolfacademy.com', ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
+            email.send()
             messages.error(self.request, 'There has been an error with your request, please try again.')
             return HttpResponseRedirect(reverse(self.payment_invalid_url))
 
