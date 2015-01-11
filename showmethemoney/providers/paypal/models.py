@@ -216,13 +216,24 @@ def _get_usersubscription_from_ipn(payment):
 
 
 def _paypal_recurring_expired(sender, **kwargs):
-    print 'doing expired, skipped'
+    print 'doing expired'
     exists, us = _get_usersubscription_from_ipn(sender)
     if exists:
         us = us.get()
         us.cancel()
         PayPalTransaction(user=us.user, subscription=us.subscription,
-                          ipn=sender, event='subscription cancelled/expired or skipped',
+                          ipn=sender, event='subscription cancelled/expired',
+                          amount=sender.mc_gross).save()
+
+def _paypal_recurring_skipped(sender, **kwargs):
+    print 'doing skipped'
+    exists, us = _get_usersubscription_from_ipn(sender)
+    if exists:
+        us = us.get()
+        us.active = False
+        us.save()
+        PayPalTransaction(user=us.user, subscription=us.subscription,
+                          ipn=sender, event='subscription skipped',
                           amount=sender.mc_gross).save()
 
 def _paypal_recurring_payment(sender, **kwargs):
@@ -243,6 +254,5 @@ def _paypal_recurring_payment(sender, **kwargs):
 
 signals.recurring_payment.connect(_paypal_recurring_payment)
 signals.recurring_expired.connect(_paypal_recurring_expired)
-signals.recurring_skipped.connect(_paypal_recurring_expired)
+signals.recurring_skipped.connect(_paypal_recurring_skipped)
 signals.recurring_cancelled.connect(_paypal_recurring_expired)
-
