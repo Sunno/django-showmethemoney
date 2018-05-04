@@ -83,4 +83,5 @@ class PayPalIPNForm(forms.ModelForm):
 
     class Meta:
         model = PayPalIPN
+        exclude = []
 
