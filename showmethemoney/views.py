@@ -11,6 +11,7 @@ from django.core.mail import EmailMessage
 from showmethemoney.forms import SelectSubscriptionForm
 from showmethemoney.providers.paypal.models import PayPalTransaction
 import showmethemoney.providers.paypal.views as paypal_views
+from subscription.models import Subscription
 
 class CancellableMixin(object):
     def cancel(self, interface, current):
@@ -71,7 +72,7 @@ class ChangeSubscriptionView(FormView):
         token = response.token
         self.request.session['paypal_token'] = token
         self.request.session['paypal_active_checkout'] = True
-        self.request.session['paypal_subscription'] = form.cleaned_data['subscription']
+        self.request.session['paypal_subscription'] = form.cleaned_data['subscription'].pk
         self.request.session['paypal_upgrading'] = us is not None
         self.request.session['paypal_current'] = us
         # We redirect to PayPal! Good luck.
@@ -103,7 +104,8 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         # User clicked Continue
         interface = paypal_views._get_paypal_interface()
-        subscription = self.request.session['paypal_subscription']
+        subscription = Subscription.objects.get(
+            pk=self.request.session['paypal_subscription'])
         recurr_dict, us = paypal_views.create_recurring_profile_handler(self.request)
         success_msg = 'We have successfully updated your subscription status. Welcome to Jim Venetos Golf Academy!'
         try:
@@ -126,7 +128,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
             # We got a valid response here. Let's subscribe our user.'
             us.profileid=response.profileid
             us.signup()
-            profile = self.request.user.get_profile()
+            profile = self.request.user.profile
             if profile.had_trial:
                 # We will wait until we get a payment notification before
                 # we extend the subscription period. By default

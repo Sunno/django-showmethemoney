@@ -12,6 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 # from django.contrib.auth.decorators import login_required
 # from django.utils.decorators import method_decorator
 import subscription.utils as subscription_utils
+from subscription.models import Subscription
 from models import PayPalUserSubscription
 #from paypal.pro.views import PayPalPro
 DOMAIN = Site.objects.get_current().domain
@@ -46,9 +47,10 @@ def create_recurring_profile_handler(request):
     second one is a PayPalUserSubscription object already set up that matches
     the data on the dict."""
     token = request.session['paypal_token']
-    subscription = request.session['paypal_subscription']
+    subscription = Subscription.objects.get(
+        pk=request.session['paypal_subscription'])
     user = request.user
-    profile = user.get_profile()
+    profile = user.profile
     upgrading = request.session['paypal_upgrading']
     us = request.session['paypal_current']
     time_obj = datetime.datetime.now()
