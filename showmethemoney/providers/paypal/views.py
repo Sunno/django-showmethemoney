@@ -52,7 +52,7 @@ def create_recurring_profile_handler(request):
     user = request.user
     profile = user.profile
     upgrading = request.session['paypal_upgrading']
-    us = request.session['paypal_current']
+    us = PayPalUserSubscription.objects.get(pk=request.session['paypal_current'])
     time_obj = datetime.datetime.now()
     trial = False
     new_us = PayPalUserSubscription(

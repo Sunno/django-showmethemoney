@@ -9,9 +9,10 @@ import paypal
 from django.core.mail import EmailMessage
 
 from showmethemoney.forms import SelectSubscriptionForm
-from showmethemoney.providers.paypal.models import PayPalTransaction
+from showmethemoney.providers.paypal.models import PayPalTransaction,\
+    PayPalUserSubscription
 import showmethemoney.providers.paypal.views as paypal_views
-from subscription.models import Subscription
+from subscription.models import Subscription, UserSubscription
 
 class CancellableMixin(object):
     def cancel(self, interface, current):
@@ -74,7 +75,7 @@ class ChangeSubscriptionView(FormView):
         self.request.session['paypal_active_checkout'] = True
         self.request.session['paypal_subscription'] = form.cleaned_data['subscription'].pk
         self.request.session['paypal_upgrading'] = us is not None
-        self.request.session['paypal_current'] = us
+        self.request.session['paypal_current'] = us.pk
         # We redirect to PayPal! Good luck.
         return HttpResponseRedirect(
             self.interface.generate_express_checkout_redirect_url(token)
@@ -90,6 +91,11 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         ctx = super(PaymentAuthorizedView, self).get_context_data(**kwargs)
         ctx['checkout_details'] = paypal_views._get_express_checkout_details(
             self.request.session['paypal_token']
+        )
+        subscription_id = self.request.session['paypal_subscription'] or\
+            self.request.session['subscription']
+        ctx['subscription'] = Subscription.objects.get(
+            pk=subscription_id
         )
         return ctx
 
@@ -111,14 +117,20 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         try:
             # Check whether or not we have to delete our current subscription.
             if self.request.session['paypal_upgrading']:
+                current = PayPalUserSubscription.objects.get(
+                    pk=self.request.session['paypal_current']
+                )
                 self.cancel(
-                    interface, self.request.session['paypal_current']
+                    interface, current
                 )
             response = interface.create_recurring_payments_profile(
                 **recurr_dict
             )
         except paypal.exceptions.PayPalAPIResponseError as e:
-            email = EmailMessage('PayPalError', e, 'contact@jimvenetosgolfacademy.com', ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
+            email = EmailMessage(
+                'PayPalError', str(e),
+                'contact@jimvenetosgolfacademy.com',
+                ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
             email.send()
             messages.error(self.request, 'There has been an error with your request, please try again.')
             return HttpResponseRedirect(reverse(self.payment_invalid_url))
