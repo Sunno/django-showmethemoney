@@ -75,7 +75,7 @@ class ChangeSubscriptionView(FormView):
         self.request.session['paypal_active_checkout'] = True
         self.request.session['paypal_subscription'] = form.cleaned_data['subscription'].pk
         self.request.session['paypal_upgrading'] = us is not None
-        self.request.session['paypal_current'] = us.pk
+        self.request.session['paypal_current'] = us.pk if us is not None else None
         # We redirect to PayPal! Good luck.
         return HttpResponseRedirect(
             self.interface.generate_express_checkout_redirect_url(token)
