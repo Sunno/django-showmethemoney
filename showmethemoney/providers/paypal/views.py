@@ -63,7 +63,10 @@ def create_recurring_profile_handler(request):
     if upgrading and us is not None:
         # We set the Trial time as the time left on the current user
         # subscription
-        delta_days = (us.expires-datetime.datetime.now().date()).days
+        if us.expires:
+            delta_days = (us.expires-datetime.datetime.now().date()).days
+        else:
+            delta_days = -1
         print delta_days
         if delta_days > 0:
             print 'Adding trial time from our current subscription'
@@ -74,11 +77,7 @@ def create_recurring_profile_handler(request):
                 TRIALTOTALBILLINGCYCLES=1,
                 TRIALAMT=0
             )
-            new_us.expires = subscription_utils.extend_date_by(
-                new_us.expires,
-                delta_days,
-                'D'
-            )
+            new_us.expires = None
             print trial_dict
     elif not profile.had_trial:
         # The user is not upgrading and hasn't had his trial period.'
@@ -89,11 +88,7 @@ def create_recurring_profile_handler(request):
             TRIALTOTALBILLINGCYCLES=1,
             TRIALAMT=0
         )
-        new_us.expires = subscription_utils.extend_date_by(
-            new_us.expires,
-            subscription.trial_period,
-            subscription.trial_unit
-        )
+        new_us.expires = None
     else:
         # No trial.
         pass
