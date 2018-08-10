@@ -3,21 +3,29 @@ from django.http import HttpResponseRedirect
 from django.views.generic import FormView, TemplateView
 from django.forms.util import ErrorList
 from django.contrib import messages
-from django.conf import settings
 import paypal
 
 from django.core.mail import EmailMessage
+from django.conf import settings
 
 from showmethemoney.forms import SelectSubscriptionForm
 from showmethemoney.providers.paypal.models import PayPalTransaction,\
     PayPalUserSubscription
 import showmethemoney.providers.paypal.views as paypal_views
-from subscription.models import Subscription, UserSubscription
+from subscription.models import Subscription
+
 
 class CancellableMixin(object):
     def cancel(self, interface, current):
-        interface.manage_recurring_payments_profile_status(current.profileid, 'Cancel')
+        try:
+            interface.manage_recurring_payments_profile_status(
+                current.profileid, 'Cancel')
+        except paypal.exceptions.PayPalAPIResponseError as e:
+            if e.error_code != 11556:
+                # this error code is returned when it's already cancelled
+                raise
         current.cancel()
+
 
 class CancelSubscriptionView(CancellableMixin, TemplateView):
     template_name = 'showmethemoney/cancel.html'
@@ -29,8 +37,11 @@ class CancelSubscriptionView(CancellableMixin, TemplateView):
         if current is not None and not current.cancelled:
             self.cancel(paypal_views._get_paypal_interface(),
                         current)
-            messages.success(self.request, 'Your subscription has been successfully cancelled.')
+            messages.success(
+                self.request,
+                'Your subscription has been successfully cancelled.')
         return HttpResponseRedirect(reverse('subscription:change'))
+
 
 class ChangeSubscriptionView(FormView):
     form_class = SelectSubscriptionForm
@@ -65,17 +76,25 @@ class ChangeSubscriptionView(FormView):
                 )
             )
         except paypal.exceptions.PayPalAPIResponseError as e:
-            email = EmailMessage('PayPalError', e, 'contact@jimvenetosgolfacademy.com', ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
+            email = EmailMessage(
+                'PayPalError',
+                e,
+                'contact@jimvenetosgolfacademy.com',
+                [admin[1] for admin in settings.ADMINS])
             email.send()
-            messages.error(self.request, 'There has been an error with your request, please try again.')
+            messages.error(
+                self.request,
+                'There has been an error with your request, please try again.')
             return HttpResponseRedirect(reverse('subscription:change'))
 
         token = response.token
         self.request.session['paypal_token'] = token
         self.request.session['paypal_active_checkout'] = True
-        self.request.session['paypal_subscription'] = form.cleaned_data['subscription'].pk
+        self.request.session['paypal_subscription'] = form.cleaned_data[
+            'subscription'].pk
         self.request.session['paypal_upgrading'] = us is not None
-        self.request.session['paypal_current'] = us.pk if us is not None else None
+        self.request.session['paypal_current'] = us.pk if us is not None \
+            else None
         # We redirect to PayPal! Good luck.
         return HttpResponseRedirect(
             self.interface.generate_express_checkout_redirect_url(token)
@@ -100,7 +119,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         return ctx
 
     def dispatch(self, request, *args, **kwargs):
-        if request.session.has_key('paypal_active_checkout') and \
+        if request.session.has_key('paypal_active_checkout') and \  # noqa
            request.session['paypal_active_checkout']:
             return super(PaymentAuthorizedView, self).dispatch(request, *args,
                                                                **kwargs)
@@ -112,8 +131,9 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         interface = paypal_views._get_paypal_interface()
         subscription = Subscription.objects.get(
             pk=self.request.session['paypal_subscription'])
-        recurr_dict, us = paypal_views.create_recurring_profile_handler(self.request)
-        success_msg = 'We have successfully updated your subscription status. Welcome to Jim Venetos Golf Academy!'
+        recurr_dict, us = paypal_views.create_recurring_profile_handler(
+            self.request)
+        success_msg = 'We have successfully updated your subscription status. Welcome to Jim Venetos Golf Academy!'  # noqa
         try:
             # Check whether or not we have to delete our current subscription.
             if self.request.session['paypal_upgrading']:
@@ -130,15 +150,17 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
             email = EmailMessage(
                 'PayPalError', str(e),
                 'contact@jimvenetosgolfacademy.com',
-                ['gpastorelli@talpor.com', 'jcastillo@talpor.com'])
+                [admin[1] for admin in settings.ADMINS])
             email.send()
-            messages.error(self.request, 'There has been an error with your request, please try again.')
+            messages.error(
+                self.request,
+                'There has been an error with your request, please try again.')
             return HttpResponseRedirect(reverse(self.payment_invalid_url))
 
         if response.profilestatus == 'ActiveProfile' or \
            response.profilestatus == 'PendingProfile':
             # We got a valid response here. Let's subscribe our user.'
-            us.profileid=response.profileid
+            us.profileid = response.profileid
             us.signup()
             profile = self.request.user.profile
             if profile.had_trial:
@@ -146,16 +168,18 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
                 # we extend the subscription period. By default
                 # signup() method activates the account and will be able to
                 # use our services for a grace period until we get notified.
-                PayPalTransaction(user=self.request.user, subscription=subscription,
-                                  event='subscription create/modify (waiting for payment)',
-                                  amount=subscription.price).save()
+                PayPalTransaction(
+                    user=self.request.user, subscription=subscription,
+                    event='subscription create/modify (waiting for payment)',
+                    amount=subscription.price).save()
             else:
                 # This is the first time the user registers with us. We will
                 # award our trial period.
-                success_msg = 'Welcome! Get started by selecting below the type of golfer you want to be. After that watch the "Welcome to the JVGA" video to begin your journey!'
-                PayPalTransaction(user=self.request.user, subscription=subscription,
-                                  event='subscription create/modify (with trial)',
-                                  amount=0).save()
+                success_msg = 'Welcome! Get started by selecting below the type of golfer you want to be. After that watch the "Welcome to the JVGA" video to begin your journey!'  # noqa
+                PayPalTransaction(
+                    user=self.request.user, subscription=subscription,
+                    event='subscription create/modify (with trial)',
+                    amount=0).save()
                 profile.had_trial = True
                 profile.save()
 
