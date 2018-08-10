@@ -119,7 +119,7 @@ class PaymentAuthorizedView(CancellableMixin, TemplateView):
         return ctx
 
     def dispatch(self, request, *args, **kwargs):
-        if request.session.has_key('paypal_active_checkout') and \  # noqa
+        if 'paypal_active_checkout' in request.session and \
            request.session['paypal_active_checkout']:
             return super(PaymentAuthorizedView, self).dispatch(request, *args,
                                                                **kwargs)
